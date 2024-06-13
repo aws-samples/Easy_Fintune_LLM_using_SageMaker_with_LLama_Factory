@@ -1,0 +1,6 @@
+[submodule "LLaMA-Factory"]
+	path = LLaMA-Factory
+	url = https://github.com/xiehust/LLaMA-Factory.git
+[submodule "awsome-distributed-training"]
+	path = awsome-distributed-training
+	url = https://github.com/aws-samples/awsome-distributed-training.git

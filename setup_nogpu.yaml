@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy a SageMaker Notebook Instance
+
+Parameters:
+  NotebookInstanceName:
+    Type: String
+    Default: my-notebook-instance
+  InstanceType:
+    Type: String
+    Default: ml.m5.2xlarge
+  VolumeSizeInGB:
+    Type: Number
+    Default: 100
+
+Resources:
+  NotebookInstance:
+    Type: AWS::SageMaker::NotebookInstance
+    Properties:
+      NotebookInstanceName: !Ref NotebookInstanceName
+      InstanceType: !Ref InstanceType
+      RoleArn: !GetAtt ExecutionRole.Arn
+      DirectInternetAccess: Enabled
+      VolumeSizeInGB: !Ref VolumeSizeInGB
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sagemaker.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+
+      Policies:
+        - PolicyName: SageMakerNotebookInstancePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:PutLogEvents'
+                  - 'logs:CreateLogStream'
+                  - 'logs:DescribeLogStreams'
+                Resource:
+                  - 'arn:aws:logs:*:*:log-group:/aws/sagemaker/Clusters/*:log-stream:*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                Resource:
+                  - 'arn:aws:logs:*:*:log-group:/aws/sagemaker/Clusters/*'
+              - Effect: Allow
+                Action:
+                  - 'cloudwatch:PutMetricData'
+                  - 'ssm:StartSession'
+                  - 'ssm:TerminateSession'
+                Resource:
+                  - '*'
+                Condition:
+                  StringEquals:
+                    'cloudwatch:namespace': '/aws/sagemaker/Clusters'
+              - Effect: Allow
+                Action:
+                  - 's3:ListBucket'
+                  - 's3:GetObject'
+                Resource:
+                  - 'arn:aws:s3:::sagemaker-*'
+              - Effect: Allow
+                Action:
+                  - 'ssmmessages:CreateControlChannel'
+                  - 'ssmmessages:CreateDataChannel'
+                  - 'ssmmessages:OpenControlChannel'
+                  - 'ssmmessages:OpenDataChannel'
+                Resource: '*'
+              - Sid: AdditionToEnableVpcConfig
+                Effect: Allow
+                Action:
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:CreateNetworkInterfacePermission'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:DeleteNetworkInterfacePermission'
+                  - 'ec2:DescribeNetworkInterfaces'
+                  - 'ec2:DescribeVpcs'
+                  - 'ec2:DescribeDhcpOptions'
+                  - 'ec2:DescribeSubnets'
+                  - 'ec2:DescribeSecurityGroups'
+                  - 'ec2:DetachNetworkInterface'
+                Resource: '*'
+              - Sid: Addition2ToEnableVpcConfig
+                Effect: Allow
+                Action: 'ec2:CreateTags'
+                Resource:
+                  - 'arn:aws:ec2:*:*:network-interface/*'
+
+Outputs:
+  NotebookInstanceName:
+    Description: Name of the Notebook Instance
+    Value: !Ref NotebookInstance
+  NotebookInstanceUrl:
+    Description: URL of the Notebook Instance
+    Value: !Join
+      - ''
+      - - 'https://console.aws.amazon.com/sagemaker/home?region='
+        - !Ref 'AWS::Region'
+        - '#/notebook-instances/openNotebook/'
+        - !Ref NotebookInstance
+        - '?view=classic'
